@@ -11,6 +11,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type prometheusTargets []string
+
 type promSDConfig struct {
 	Labels  map[string]string `json:"labels"`
 	Targets []string          `json:"targets"`
@@ -65,7 +67,7 @@ func shortName(host string) string {
 
 // compareToSat takes a slice of known target hosts and compares it to defined Satellite hosts.  It returns a slice of
 // hosts that are in Satellite but are not Prometheus targets.
-func compareToSat(targets []string) (misses []string) {
+func (targets prometheusTargets) compareToSat() (misses []string) {
 	j, err := jsonFromFile("/home/crooks/sample_json/rhsat.json")
 	if err != nil {
 		log.Fatalf("Unable to parse json file: %v", err)
@@ -87,7 +89,7 @@ func compareToSat(targets []string) (misses []string) {
 	return
 }
 
-func promTargets() (targets []string, err error) {
+func (targets prometheusTargets) promTargets() (err error) {
 	j, err := jsonFromFile("/home/crooks/sample_json/prom.json")
 	if err != nil {
 		log.Fatalf("Unable to parse json file: %v", err)
@@ -99,8 +101,8 @@ func promTargets() (targets []string, err error) {
 		// This is a bit kludgy!  Targets written to the auto file (in a previous run) will now be defined targets.
 		// As a consequence they will be treated as defined targets (in the current run) and will not be included in the
 		// new auto_targets file.  The solution is to exclude them from the slice of known targets.
-		env := labels.Get("env")
-		if env.Exists() && env.String() == cfg.Labels["env"] {
+		autoLabel := labels.Get(cfg.LabelAuto)
+		if autoLabel.Exists() && autoLabel.String() == cfg.Labels[cfg.LabelAuto] {
 			continue
 		}
 		if instance.Exists() && job.Exists() && job.String() == cfg.NodeExporter {
@@ -125,12 +127,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Cannot parse config: %v", err)
 	}
-	targets, err := promTargets()
+	// Create a slice for targets discovered in Prometheus
+	t := make(prometheusTargets, 0)
+
+	err = t.promTargets()
 	if err != nil {
 		log.Fatalf("Unable to parse Prometheus API: %v", err)
 	}
 	sd := newPromSDConfig()
-	sd.Targets = compareToSat(targets)
+	sd.Targets = t.compareToSat()
 	err = writeSDConfig(cfg.OutJSON, sd)
 	if err != nil {
 		log.Fatalf("Failed to write SD config to file: %v", err)

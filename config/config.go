@@ -1,19 +1,23 @@
 package config
 
 import (
-	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
-// Config contains all the configuration settings for Yamn.
+// Config contains all the configuration settings for promsat
 type Config struct {
 	NodeExporter string            `yaml:"node_exporter_job"`
 	OutJSON      string            `yaml:"target_filename"`
+	// Labels is a map of all labels that should be applied to auto-registered hosts.
 	Labels       map[string]string `yaml:"target_labels"`
+	// The autohost label is used to identify targets that have been auto-added.  The Labels map MUST include a key
+	// matching LabelAuto.
+	LabelAuto string `yaml:"autohosts_label"`
 }
 
 // Flags are the command line flags
@@ -61,8 +65,8 @@ func ParseConfig(filename string) (*Config, error) {
 	if err := y.Decode(&config); err != nil {
 		return nil, err
 	}
-	if _, ok := config.Labels["env"]; !ok {
-		err = errors.New("required label \"env\" is not defined")
+	if _, ok := config.Labels[config.LabelAuto]; !ok {
+		err = fmt.Errorf("required label \"%s\" is not defined", config.LabelAuto)
 		return nil, err
 	}
 	return config, nil
