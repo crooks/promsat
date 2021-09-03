@@ -9,6 +9,7 @@ import (
 
 	"github.com/crooks/promsat/config"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 type prometheusTargets []string
@@ -67,10 +68,15 @@ func shortName(host string) string {
 
 // compareToSat takes a slice of known target hosts and compares it to defined Satellite hosts.  It returns a slice of
 // hosts that are in Satellite but are not Prometheus targets.
-func (targets prometheusTargets) compareToSat() (misses []string) {
+func (targets prometheusTargets) compareToSat() {
 	j, err := jsonFromFile("/home/crooks/sample_json/rhsat.json")
 	if err != nil {
 		log.Fatalf("Unable to parse json file: %v", err)
+	}
+	sj := "{}"
+	sj, err = sjson.Set(sj, "-1.labels", cfg.Labels)
+	if err != nil {
+		log.Fatalf("Unable to create array: %v", err)
 	}
 	for _, v := range j.Get("results").Array() {
 		host := v.Get("name")
@@ -81,12 +87,15 @@ func (targets prometheusTargets) compareToSat() (misses []string) {
 			if subscription.Int() == 0 && ip.String() != "" {
 				short := shortName(host.String())
 				if !contains(targets, short) {
-					misses = append(misses, short)
+					sj, err = sjson.Set(sj, "-1.targets", short)
+					if err != nil {
+						log.Printf("Unable to append target: %v", err)
+						continue
+					}
 				}
 			}
 		}
 	}
-	return
 }
 
 func (targets prometheusTargets) promTargets() (err error) {
@@ -134,10 +143,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to parse Prometheus API: %v", err)
 	}
-	sd := newPromSDConfig()
-	sd.Targets = t.compareToSat()
-	err = writeSDConfig(cfg.OutJSON, sd)
-	if err != nil {
-		log.Fatalf("Failed to write SD config to file: %v", err)
-	}
+	t.compareToSat()
 }
