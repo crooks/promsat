@@ -9,12 +9,11 @@ import (
 
 	"github.com/crooks/promsat/config"
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
 )
 
-type prometheusTargets []string
+type prometheusTargets []*promTarget
 
-type promSDConfig struct {
+type prometheusTarget struct {
 	Labels  map[string]string `json:"labels"`
 	Targets []string          `json:"targets"`
 }
@@ -29,9 +28,10 @@ func contains(slice []string, str string) bool {
 	return false
 }
 
-func newPromSDConfig() *promSDConfig {
-	return &promSDConfig{
+func newPrometheusTarget() *prometheusTarget {
+	return &prometheusTarget{
 		Labels: make(map[string]string),
+		Targets: make([]string, 0),
 	}
 }
 
@@ -82,23 +82,26 @@ func (targets prometheusTargets) compareToSat() {
 		host := v.Get("name")
 		ip := v.Get("ip")
 		subscription := v.Get("subscription_status")
-		if host.Exists() && subscription.Exists() && ip.Exists() {
-			// To be considered valid, a Satellite host must have a subscription and an IP address.
-			if subscription.Int() == 0 && ip.String() != "" {
-				short := shortName(host.String())
-				if !contains(targets, short) {
-					sj, err = sjson.Set(sj, "-1.targets", short)
-					if err != nil {
-						log.Printf("Unable to append target: %v", err)
-						continue
-					}
-				}
-			}
+		if !host.Exists() || !subscription.Exists() || !ip.Exists() {
+			// To be considered valid, a Satellite host must have a name, a subscription and an IP address.
+			continue
+		}
+		short := shortName(host.String())
+		if subscription.Int() != 0 {
+			log.Printf("Invalid subscription for %s", shortName)
+			continue
+		}
+		if ip.String() == "" {
+			log.Printf("No IPv4 address for %s", shortName)
+			continue
+		}
+		if !contains(targets.Targets, short) {
+			target.Targets = append(target.Targets, short)
 		}
 	}
 }
 
-func (targets prometheusTargets) promTargets() (err error) {
+func (targets prometheusTargets) getPrometheusTargets() (err error) {
 	j, err := jsonFromFile("/home/crooks/sample_json/prom.json")
 	if err != nil {
 		log.Fatalf("Unable to parse json file: %v", err)
@@ -137,9 +140,8 @@ func main() {
 		log.Fatalf("Cannot parse config: %v", err)
 	}
 	// Create a slice for targets discovered in Prometheus
-	t := make(prometheusTargets, 0)
-
-	err = t.promTargets()
+	targets := newPrometheusTarget()
+	err = t.getPrometheusTargets()
 	if err != nil {
 		log.Fatalf("Unable to parse Prometheus API: %v", err)
 	}
