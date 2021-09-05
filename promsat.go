@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/crooks/promsat/api"
 	"github.com/crooks/promsat/config"
@@ -78,6 +78,7 @@ func shortName(host string) string {
 }
 
 func getSatelliteHosts() gjson.Result {
+	defer timeTrack(time.Now(), "getSatelliteHosts")
 	authAPI := api.NewBasicAuthClient(cfg.APIUser, cfg.APIPassword, cfg.APICertFile)
 	hostsURL := fmt.Sprintf("%s/api/v2/hosts?per_page=1000", cfg.BaseURLSatAPI)
 	bytes, err := authAPI.GetJSON(hostsURL)
@@ -89,6 +90,7 @@ func getSatelliteHosts() gjson.Result {
 }
 
 func getPrometheusHosts() gjson.Result {
+	defer timeTrack(time.Now(), "getPrometheusHosts")
 	hostsURL := fmt.Sprintf("%s/api/v1/targets", cfg.BaseURLPromAPI)
 	bytes, err := api.GetNoAuth(hostsURL)
 	if err != nil {
@@ -142,12 +144,13 @@ func (t *existingTargets) compareToSat() *autoTarget {
 	return at
 }
 
-func (t *existingTargets) getPrometheusTargets() (err error) {
+// getPrometheusTargets queries the Prometheus API and constructs a list of existing targets.
+func (t *existingTargets) getPrometheusTargets() {
 	/*
-	j, err := jsonFromFile("/home/crooks/sample_json/prom.json")
-	if err != nil {
-		log.Fatalf("Unable to parse json file: %v", err)
-	}
+		j, err := jsonFromFile("/home/crooks/sample_json/prom.json")
+		if err != nil {
+			log.Fatalf("Unable to parse json file: %v", err)
+		}
 	*/
 	j := getPrometheusHosts()
 	for _, target := range j.Get("data.activeTargets").Array() {
@@ -167,16 +170,20 @@ func (t *existingTargets) getPrometheusTargets() (err error) {
 		}
 	}
 	if len(t.hosts) == 0 {
-		err = errors.New("zero targets returned")
-		return
+		log.Fatal("No prometheus targets found")
 	}
 	log.Printf("Prometheus targets found: %d", len(t.hosts))
-	return
 }
 
 var (
 	cfg *config.Config
 )
+
+// timeTrack can be used to time the processing duration of a function.
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
+}
 
 func main() {
 	var err error
@@ -191,10 +198,7 @@ func main() {
 	// Create a slice for targets discovered in Prometheus
 	t := new(existingTargets)
 	t.hosts = make([]string, 0)
-	err = t.getPrometheusTargets()
-	if err != nil {
-		log.Fatalf("Unable to parse Prometheus API: %v", err)
-	}
+	t.getPrometheusTargets()
 	at := t.compareToSat()
 	at.writeTargets(cfg.OutJSON)
 }
