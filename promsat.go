@@ -7,10 +7,14 @@ import (
 	"log"
 	"strings"
 	"time"
-
+	
 	"github.com/crooks/promsat/api"
 	"github.com/crooks/promsat/config"
 	"github.com/tidwall/gjson"
+)
+
+var (
+	cfg *config.Config
 )
 
 // existingTargets is a slice of targets already known to Prometheus (exclulding auto-added).
@@ -166,7 +170,6 @@ func (t *existingTargets) getPrometheusTargets() {
 		}
 		if instance.Exists() && job.Exists() && job.String() == cfg.NodeExporter {
 			t.hosts = append(t.hosts, instance.String())
-			log.Printf("Prometheus knows about: %s", instance)
 		}
 	}
 	if len(t.hosts) == 0 {
@@ -174,10 +177,6 @@ func (t *existingTargets) getPrometheusTargets() {
 	}
 	log.Printf("Prometheus targets found: %d", len(t.hosts))
 }
-
-var (
-	cfg *config.Config
-)
 
 // timeTrack can be used to time the processing duration of a function.
 func timeTrack(start time.Time, name string) {
