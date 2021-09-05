@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/crooks/promsat/api"
 	"github.com/crooks/promsat/config"
 	"github.com/tidwall/gjson"
 )
@@ -76,13 +77,37 @@ func shortName(host string) string {
 	return strings.Split(host, ".")[0]
 }
 
+func getSatelliteHosts() gjson.Result {
+	authAPI := api.NewBasicAuthClient(cfg.APIUser, cfg.APIPassword, cfg.APICertFile)
+	hostsURL := fmt.Sprintf("%s/api/v2/hosts?per_page=1000", cfg.BaseURLSatAPI)
+	bytes, err := authAPI.GetJSON(hostsURL)
+	if err != nil {
+		// Little point in returning an error here.  No API is fatal.
+		log.Fatalf("Unable to parse Satellite API: %v", err)
+	}
+	return gjson.ParseBytes(bytes)
+}
+
+func getPrometheusHosts() gjson.Result {
+	hostsURL := fmt.Sprintf("%s/api/v1/targets", cfg.BaseURLPromAPI)
+	bytes, err := api.GetNoAuth(hostsURL)
+	if err != nil {
+		log.Fatalf("Unable to parse Prometheus API: %v", err)
+	}
+	return gjson.ParseBytes(bytes)
+}
+
 // compareToSat takes a slice of known target hosts and compares it to defined Satellite hosts.  It returns a slice of
 // hosts that are in Satellite but are not Prometheus targets.
 func (t *existingTargets) compareToSat() *autoTarget {
-	j, err := jsonFromFile("/home/crooks/sample_json/rhsat.json")
-	if err != nil {
-		log.Fatalf("Unable to parse json file: %v", err)
-	}
+	/*
+		// Useful for testing on hosts without API access
+		j, err := jsonFromFile("/home/crooks/sample_json/rhsat.json")
+		if err != nil {
+			log.Fatalf("Unable to parse json file: %v", err)
+		}
+	*/
+	j := getSatelliteHosts()
 	at := newAutoTarget()
 	for _, v := range j.Get("results").Array() {
 		host := v.Get("name")
@@ -118,10 +143,13 @@ func (t *existingTargets) compareToSat() *autoTarget {
 }
 
 func (t *existingTargets) getPrometheusTargets() (err error) {
+	/*
 	j, err := jsonFromFile("/home/crooks/sample_json/prom.json")
 	if err != nil {
 		log.Fatalf("Unable to parse json file: %v", err)
 	}
+	*/
+	j := getPrometheusHosts()
 	for _, target := range j.Get("data.activeTargets").Array() {
 		labels := target.Get("labels")
 		job := labels.Get("job")

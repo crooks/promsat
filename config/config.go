@@ -11,6 +11,13 @@ import (
 
 // Config contains all the configuration settings for promsat
 type Config struct {
+	APICertFile string `yaml:"api_certfile"`
+	APIPassword string `yaml:"api_password"`
+	APIUser     string `yaml:"api_user"`
+
+	BaseURLSatAPI  string `yaml:"baseurl_satellite"`
+	BaseURLPromAPI string `yaml:"baseurl_prometheus"`
+
 	NodeExporter string `yaml:"node_exporter_job"`
 	OutJSON      string `yaml:"target_filename"`
 	// Labels is a map of all labels that should be applied to auto-registered hosts.
@@ -54,6 +61,10 @@ func ParseFlags() *Flags {
 	if f.Config == "" && os.Getenv("PROMSATCFG") != "" {
 		f.Config = os.Getenv("PROMSATCFG")
 	}
+	// If no other config is defined, boldly assume one.
+	if f.Config == "" {
+		f.Config = "/etc/promsat/config.yml"
+	}
 	return f
 }
 
@@ -74,9 +85,13 @@ func ParseConfig(filename string) (*Config, error) {
 		err = fmt.Errorf("required label \"%s\" is not defined", config.AutoLabel)
 		return nil, err
 	}
-	// Set a default port for autohost targets
+	// Set a default port for autohost targets.
 	if config.AutoPort == 0 {
 		config.AutoPort = 9100
+	}
+	// Another bold assumption if no config option is provided.
+	if config.NodeExporter == "" {
+		config.NodeExporter = "node_exporter"
 	}
 	return config, nil
 }
