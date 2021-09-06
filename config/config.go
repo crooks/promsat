@@ -28,12 +28,14 @@ type Config struct {
 	AutoPort  int    `yaml:"autohosts_port"`
 	// These hosts will not be added to the autohosts target file
 	ExcludeHosts []string `yaml:"exclude_hosts"`
+	ExcludePrefix []string `yaml:"exclude_host_prefix"`
 }
 
 // Flags are the command line flags
 type Flags struct {
 	Config string
 	Debug  bool
+	Version bool
 }
 
 // WriteConfig will create a YAML formatted config file from a Config struct
@@ -55,6 +57,7 @@ func ParseFlags() *Flags {
 	// Config file
 	flag.StringVar(&f.Config, "config", "", "Config file")
 	flag.BoolVar(&f.Debug, "debug", false, "Output debugging info")
+	flag.BoolVar(&f.Version, "version", false, "Print build info")
 	flag.Parse()
 
 	// If a "--config" flag hasn't been provided, try reading a YAMNCFG environment variable.

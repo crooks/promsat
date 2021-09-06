@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 	
@@ -15,6 +16,7 @@ import (
 
 var (
 	cfg *config.Config
+	gitCommit string
 )
 
 // existingTargets is a slice of targets already known to Prometheus (exclulding auto-added).
@@ -36,6 +38,16 @@ type autoTarget struct {
 func contains(slice []string, str string) bool {
 	for _, s := range slice {
 		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+// hasPrefix returns true if str has a prefix of any slice entry.
+func hasPrefix(slice []string, str string) bool {
+	for _, s := range slice {
+		if strings.HasPrefix(str, s) {
 			return true
 		}
 	}
@@ -137,6 +149,11 @@ func (t *existingTargets) compareToSat() *autoTarget {
 			log.Printf("Host %s is excluded", short)
 			continue
 		}
+		// As with the previous exclude but this time, any hosts that have a prefix of an entry in cfg.ExcludePrefix.
+		if hasPrefix(cfg.ExcludePrefix, short) {
+			log.Printf("Host %s is excluded (by prefix)", short)
+			continue
+		}
 
 		// Is this Satellite host already known to Prometheus?
 		if contains(t.hosts, short) {
@@ -184,9 +201,17 @@ func timeTrack(start time.Time, name string) {
 	log.Printf("%s took %s", name, elapsed)
 }
 
+func version() {
+	fmt.Printf("Git Commit: %s\n", gitCommit)
+	os.Exit(0)
+}
+
 func main() {
 	var err error
 	flags := config.ParseFlags()
+	if flags.Version {
+		version()
+	}
 	if !flags.Debug {
 		log.SetOutput(ioutil.Discard)
 	}
