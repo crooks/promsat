@@ -20,6 +20,7 @@ type Config struct {
 
 	NodeExporter string `yaml:"node_exporter_job"`
 	OutJSON      string `yaml:"target_filename"`
+	OutJSONTmp   string `yaml:"target_filename_tmp"`
 	// Labels is a map of all labels that should be applied to auto-registered hosts.
 	Labels map[string]string `yaml:"target_labels"`
 	// AutoLabel is used to identify targets that have been auto-added.  The Labels map MUST include a key
@@ -87,6 +88,15 @@ func ParseConfig(filename string) (*Config, error) {
 	if _, ok := config.Labels[config.AutoLabel]; !ok {
 		err = fmt.Errorf("required label \"%s\" is not defined", config.AutoLabel)
 		return nil, err
+	}
+	// Writing a JSON targets file is the entire point of this code.  Guessing a filename is probably silly but, here
+	// goes.
+	if config.OutJSON == "" {
+		config.OutJSON = "/tmp/autoconf.json"
+	}
+	// If the tempfile isn't defined, make up a valid filename for it
+	if config.OutJSONTmp == "" {
+		config.OutJSONTmp = config.OutJSON + ".tmp"
 	}
 	// Set a default port for autohost targets.
 	if config.AutoPort == 0 {

@@ -73,7 +73,7 @@ func jsonFromFile(filename string) (gjson.Result, error) {
 }
 
 // writeTargets outputs a Prometheus config to file
-func (at *autoTarget) writeTargets(filename string) (err error) {
+func (at *autoTarget) writeTargets() (err error) {
 	// Although we are only writing a single entry to the targets file, Prometheus expects it to be in a list.
 	targets := make(autoTargets, 1)
 	for k, v := range cfg.Labels {
@@ -81,8 +81,13 @@ func (at *autoTarget) writeTargets(filename string) (err error) {
 	}
 	targets[0] = at
 	b, _ := json.MarshalIndent(targets, "", "  ")
-	err = ioutil.WriteFile(filename, b, 0644)
+	err = ioutil.WriteFile(cfg.OutJSONTmp, b, 0644)
 	if err != nil {
+		return
+	}
+	err = os.Rename(cfg.OutJSONTmp, cfg.OutJSON)
+	if err != nil {
+		err = fmt.Errorf("Rename temp JSON failed: %v", err)
 		return
 	}
 	return
@@ -224,5 +229,5 @@ func main() {
 	t.hosts = make([]string, 0)
 	t.getPrometheusTargets()
 	at := t.compareToSat()
-	at.writeTargets(cfg.OutJSON)
+	at.writeTargets()
 }
