@@ -1,12 +1,19 @@
 package config
 
 import (
+	"errors"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v2"
+)
+
+var (
+	errUndefinedAutoHosts      error = errors.New("required config autohosts_label is not specified")
+	errUndefinedAutoLabel      error = errors.New("the specified autohosts_label is not defined in target_labels")
+	errUndefinedTargetFilename error = errors.New("required config target_filename is not specified")
 )
 
 // Config contains all the configuration settings for promsat
@@ -20,6 +27,7 @@ type Config struct {
 
 	ExporterJob string `yaml:"exporter_job"`
 	OutJSON     string `yaml:"target_filename"`
+	OutJSONTmp  string `yaml:"target_filename_tmp"`
 	// Labels is a map of all labels that should be applied to auto-registered hosts.
 	Labels map[string]string `yaml:"target_labels"`
 	// AutoLabel is used to identify targets that have been auto-added.  The Labels map MUST include a key
@@ -84,9 +92,15 @@ func ParseConfig(filename string) (*Config, error) {
 	if err := y.Decode(&config); err != nil {
 		return nil, err
 	}
+	if config.OutJSON == "" {
+		return nil, errUndefinedTargetFilename
+	}
+	if config.AutoLabel == "" {
+		return nil, errUndefinedAutoHosts
+	}
+
 	if _, ok := config.Labels[config.AutoLabel]; !ok {
-		err = fmt.Errorf("required label \"%s\" is not defined", config.AutoLabel)
-		return nil, err
+		return nil, errUndefinedAutoLabel
 	}
 	// Set a default port for autohost targets.
 	if config.AutoPort == 0 {
@@ -96,5 +110,17 @@ func ParseConfig(filename string) (*Config, error) {
 	if config.ExporterJob == "" {
 		config.ExporterJob = "node_exporter"
 	}
+	// If no temp filename is defined in the configuration, construct something sane from the OutJSON name.
+	if config.OutJSONTmp == "" {
+		config.OutJSONTmp = tmpFile(config.OutJSON)
+	}
 	return config, nil
+}
+
+// tmpFile takes a filename and returns a filename with a leading underscore to indicate a temporary file
+func tmpFile(filename string) string {
+	fname := filepath.Base(filename)
+	fpath := filepath.Dir(filename)
+	fname = "_" + fname
+	return filepath.Join(fpath, fname)
 }
