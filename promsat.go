@@ -80,14 +80,16 @@ func (at *autoTarget) writeTargets() (err error) {
 		at.Labels[k] = v
 	}
 	targets[0] = at
+	// Write targets to a temporary JSON file
 	b, _ := json.MarshalIndent(targets, "", "  ")
 	err = ioutil.WriteFile(cfg.OutJSONTmp, b, 0644)
 	if err != nil {
 		return
 	}
+	// Rename (overwrite) the temporary filename to the actual filename
 	err = os.Rename(cfg.OutJSONTmp, cfg.OutJSON)
 	if err != nil {
-		err = fmt.Errorf("Rename temp JSON failed: %v", err)
+		err = fmt.Errorf("rename temp JSON failed: %v", err)
 		return
 	}
 	return
