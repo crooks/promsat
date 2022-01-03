@@ -18,7 +18,7 @@ type Config struct {
 	BaseURLSatAPI  string `yaml:"baseurl_satellite"`
 	BaseURLPromAPI string `yaml:"baseurl_prometheus"`
 
-	NodeExporter string `yaml:"node_exporter_job"`
+	ExporterJob string `yaml:"exporter_job"`
 	OutJSON      string `yaml:"target_filename"`
 	OutJSONTmp   string `yaml:"target_filename_tmp"`
 	// Labels is a map of all labels that should be applied to auto-registered hosts.
@@ -28,14 +28,14 @@ type Config struct {
 	AutoLabel string `yaml:"autohosts_label"`
 	AutoPort  int    `yaml:"autohosts_port"`
 	// These hosts will not be added to the autohosts target file
-	ExcludeHosts []string `yaml:"exclude_hosts"`
+	ExcludeHosts  []string `yaml:"exclude_hosts"`
 	ExcludePrefix []string `yaml:"exclude_host_prefix"`
 }
 
 // Flags are the command line flags
 type Flags struct {
-	Config string
-	Debug  bool
+	Config  string
+	Debug   bool
 	Version bool
 }
 
@@ -103,8 +103,8 @@ func ParseConfig(filename string) (*Config, error) {
 		config.AutoPort = 9100
 	}
 	// Another bold assumption if no config option is provided.
-	if config.NodeExporter == "" {
-		config.NodeExporter = "node_exporter"
+	if config.ExporterJob == "" {
+		config.ExporterJob = "node_exporter"
 	}
 	return config, nil
 }
