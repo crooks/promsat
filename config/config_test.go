@@ -21,9 +21,13 @@ func TestConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to create TempFile: %v", err)
 	}
-	defer os.Remove(testFile.Name())
+	//defer os.Remove(testFile.Name())
 	fakeCfg := new(Config)
-	fakeCfg.NodeExporter = "node_exporter"
+	fakeCfg.ExporterJob = "fake_exporter"
+	fakeCfg.Labels = map[string]string{
+		"env": "fake",
+	}
+	fakeCfg.AutoLabel = "env"
 	fakeCfg.WriteConfig(testFile.Name())
 
 	cfg, err := ParseConfig(testFile.Name())
@@ -31,7 +35,7 @@ func TestConfig(t *testing.T) {
 		t.Fatalf("ParseConfig returned: %v", err)
 	}
 
-	if cfg.NodeExporter != fakeCfg.NodeExporter {
-		t.Fatalf("Expected cfg.NodeExporter to contain \"%v\" but got \"%v\".", fakeCfg.NodeExporter, cfg.NodeExporter)
+	if cfg.ExporterJob != fakeCfg.ExporterJob {
+		t.Fatalf("Expected cfg.ExporterJob to contain \"%v\" but got \"%v\".", fakeCfg.ExporterJob, cfg.ExporterJob)
 	}
 }

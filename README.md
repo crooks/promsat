@@ -18,7 +18,7 @@ api_user: satellite_username
 apt_password: satellite_password
 baseurl_satellite: https://sat.domain.com
 baseurl_prometheus: https://prometheus.domain.com
-node_exporter_job: node_exporter
+exporter_job: node_exporter
 target_filename: /var/local/cache/prometheus/auto_targets.json
 labels:
   env: auto
@@ -28,7 +28,7 @@ autohosts_port: 9100
 exclude_hosts:
   - dontmonitorme
 exclude_host_prefix:
-  - dark
+  - excludeme
 ```
 
 Where:
@@ -36,10 +36,10 @@ Where:
 * api_password = Password for Satellite API user (A low privilege, read-only account)
 * baseurl_satellite = The URL of the Satellite server hosting the API
 * baseurl_prometheus = The URL of the Prometheus server
-* node_exporter_job = Name of the job associated with Prometheus Node Exporter
+* exporter_job = Name of the reporter job associated with this auto-discovery process
 * target_filename = Filename where auto-discovered targets should be written (This should be added to the Node Exporter `file_sd_config` targets list)
 * labels = Labels to append to each auto-discovered host
-* autohosts_label = A label that identifies auto-discovered hosts
+* autohosts_label = A label that uniquely identifies auto-discovered hosts
 * autohosts_port = Port number of the exporter associated with the auto-discovery process
 * exclude_hosts = List of hostnames to exclude from the targets file
 * exclude_host_prefix = As `exclude_hosts` but acts like a wildcard

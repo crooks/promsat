@@ -8,14 +8,14 @@ import (
 	"os"
 	"strings"
 	"time"
-	
+
 	"github.com/crooks/promsat/api"
 	"github.com/crooks/promsat/config"
 	"github.com/tidwall/gjson"
 )
 
 var (
-	cfg *config.Config
+	cfg       *config.Config
 	gitCommit string
 )
 
@@ -185,7 +185,7 @@ func (t *existingTargets) getPrometheusTargets() {
 		if autoLabel.Exists() && autoLabel.String() == cfg.Labels[cfg.AutoLabel] {
 			continue
 		}
-		if instance.Exists() && job.Exists() && job.String() == cfg.NodeExporter {
+		if instance.Exists() && job.Exists() && job.String() == cfg.ExporterJob {
 			t.hosts = append(t.hosts, instance.String())
 		}
 	}
