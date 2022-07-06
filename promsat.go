@@ -136,20 +136,21 @@ func (t *existingTargets) compareToSat() *autoTarget {
 	at := newAutoTarget()
 	for _, v := range j.Get("results").Array() {
 		host := v.Get("name")
-		ip := v.Get("ip")
-		subscription := v.Get("subscription_status")
-		if !host.Exists() || !subscription.Exists() || !ip.Exists() {
-			// To be considered valid, a Satellite host must have a name, a subscription and an IP address.
+		// All hosts need a hostame.  This check should never match but, never say never!
+		if !host.Exists() || len(host.String()) == 0 {
+			log.Println("Invalid hostname for Satellite host")
 			continue
 		}
 		short := shortName(host.String())
-		if subscription.Int() != 0 {
+		subscription := v.Get("subscription_status")
+		if !subscription.Exists() || subscription.Int() != 0 {
 			log.Printf("Invalid subscription for %s", short)
 			continue
 		}
-		if ip.String() == "" {
-			log.Printf("No IPv4 address for %s", short)
-			continue
+		// This check is intended to exclude Red Hat Satellite virthosts
+		osid := v.Get("operatingsystem_id")
+		if !osid.Exists() || osid.Int() == 0 {
+			log.Printf("No valid OS ID found for %s", short)
 		}
 		// Don't add hosts that are explicitly excluded
 		if contains(cfg.ExcludeHosts, short) {
