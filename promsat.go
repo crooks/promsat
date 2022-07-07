@@ -151,6 +151,7 @@ func (t *existingTargets) compareToSat() *autoTarget {
 		osid := v.Get("operatingsystem_id")
 		if !osid.Exists() || osid.Int() == 0 {
 			log.Printf("No valid OS ID found for %s", short)
+			continue
 		}
 		// Don't add hosts that are explicitly excluded
 		if contains(cfg.ExcludeHosts, short) {
