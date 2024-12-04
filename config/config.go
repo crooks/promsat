@@ -25,6 +25,8 @@ type Config struct {
 	BaseURLSatAPI  string `yaml:"baseurl_satellite"`
 	BaseURLPromAPI string `yaml:"baseurl_prometheus"`
 
+	DefaultDomain string `yaml:"default_domain"`
+
 	ExporterJob string `yaml:"exporter_job"`
 	OutJSON     string `yaml:"target_filename"`
 	OutJSONTmp  string `yaml:"target_filename_tmp"`
