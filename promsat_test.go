@@ -13,6 +13,8 @@ func TestShortName(t *testing.T) {
 		{"foo.testdomain.com", "fakedomain.com", "foo.testdomain.com"},
 		{"foo.testdomain.com", "testdomain.com", "foo"},
 		{"foo", "fakedomain.com", "foo"},
+		{"foo..testdomain.com", "testdomain.com", "foo"},
+		{"foo..testdomain.com", "fakedomain.com", "foo.testdomain.com"},
 	}
 
 	for _, tt := range tests {

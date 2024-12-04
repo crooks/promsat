@@ -98,21 +98,21 @@ func (at *autoTarget) writeTargets() (err error) {
 // shortName takes a hostname string and decides if it should be treated as a shotname or an FQDN.
 func shortName(fqdn, defaultDomain string) string {
 	// split hostname.domain.foo into ["hostname", "domain.foo"]
-	fqdnElements := strings.SplitAfterN(fqdn, ".", 2)
+	fqdnElements := strings.SplitN(fqdn, ".", 2)
 	// SplitAfterN leaves the separator in element 0
-	hostname := strings.TrimRight(fqdnElements[0], ".")
+	hostname := fqdnElements[0]
 	if len(fqdnElements) == 1 {
 		// We received a shortname.  Return all of it.
 		return hostname
 	} else if len(fqdnElements) != 2 {
 		log.Fatalf("%s: Unexpected elements in hostname.  Expected=2, Got=%d", fqdn, len(fqdnElements))
 	}
-	domain := fqdnElements[1]
+	domain := strings.TrimLeft(fqdnElements[1], ".")
 	if domain == defaultDomain {
 		// This is our default domain so return the shortname.
 		return hostname
 	}
-	return fqdn
+	return fmt.Sprintf("%s.%s", hostname, domain)
 }
 
 func getSatelliteHosts() gjson.Result {
