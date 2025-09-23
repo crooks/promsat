@@ -157,11 +157,6 @@ func (t *existingTargets) compareToSat() *autoTarget {
 			continue
 		}
 		short := shortName(host.String(), cfg.DefaultDomain)
-		subscription := v.Get("subscription_status")
-		if !subscription.Exists() || subscription.Int() != 0 {
-			log.Printf("Invalid subscription for %s", short)
-			continue
-		}
 		// This check is intended to exclude Red Hat Satellite virthosts
 		osid := v.Get("operatingsystem_id")
 		if !osid.Exists() || osid.Int() == 0 {
