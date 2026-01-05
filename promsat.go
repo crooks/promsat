@@ -95,24 +95,16 @@ func (at *autoTarget) writeTargets() (err error) {
 	return
 }
 
-// shortName takes a hostname string and decides if it should be treated as a shotname or an FQDN.
-func shortName(fqdn, defaultDomain string) string {
-	// split hostname.domain.foo into ["hostname", "domain.foo"]
-	fqdnElements := strings.SplitN(fqdn, ".", 2)
-	// SplitAfterN leaves the separator in element 0
-	hostname := fqdnElements[0]
-	if len(fqdnElements) == 1 {
-		// We received a shortname.  Return all of it.
-		return hostname
-	} else if len(fqdnElements) != 2 {
-		log.Fatalf("%s: Unexpected elements in hostname.  Expected=2, Got=%d", fqdn, len(fqdnElements))
+// fullyQualified takes a hostName (of FQDN or short format) and returns a shortname and a fully-qualified version.
+func fullyQualify(hostName, defaultDomain string) (string, string) {
+	fqdnElements := strings.SplitN(hostName, ".", 2)
+	// More than one element in fqdnElements indicates this is a fully-qualified name.
+	if len(fqdnElements) >= 2 {
+		// trimDotDomain ensures there isn't a leading '.' in the domain name.
+		trimDotDomain := strings.TrimLeft(fqdnElements[1], ".")
+		return fqdnElements[0], fmt.Sprintf("%s.%s", fqdnElements[0], trimDotDomain)
 	}
-	domain := strings.TrimLeft(fqdnElements[1], ".")
-	if domain == defaultDomain {
-		// This is our default domain so return the shortname.
-		return hostname
-	}
-	return fmt.Sprintf("%s.%s", hostname, domain)
+	return hostName, fmt.Sprintf("%s.%s", hostName, defaultDomain)
 }
 
 func getSatelliteHosts() gjson.Result {
@@ -156,30 +148,31 @@ func (t *existingTargets) compareToSat() *autoTarget {
 			log.Println("Invalid hostname for Satellite host")
 			continue
 		}
-		short := shortName(host.String(), cfg.DefaultDomain)
+		//shortName := shortName(host.String(), cfg.DefaultDomain)
+		shortName, fqdnName := fullyQualify(host.String(), cfg.DefaultDomain)
 		// This check is intended to exclude Red Hat Satellite virthosts
 		osid := v.Get("operatingsystem_id")
 		if !osid.Exists() || osid.Int() == 0 {
-			log.Printf("No valid OS ID found for %s", short)
+			log.Printf("No valid OS ID found for %s", fqdnName)
 			continue
 		}
 		// Don't add hosts that are explicitly excluded
-		if contains(cfg.ExcludeHosts, short) {
-			log.Printf("Host %s is excluded", short)
+		if contains(cfg.ExcludeHosts, fqdnName) {
+			log.Printf("Host %s is excluded", fqdnName)
 			continue
 		}
 		// As with the previous exclude but this time, any hosts that have a prefix of an entry in cfg.ExcludePrefix.
-		if hasPrefix(cfg.ExcludePrefix, short) {
-			log.Printf("Host %s is excluded (by prefix)", short)
+		if hasPrefix(cfg.ExcludePrefix, fqdnName) {
+			log.Printf("Host %s is excluded (by prefix)", fqdnName)
 			continue
 		}
 
 		// Is this Satellite host already known to Prometheus?
-		if contains(t.hosts, short) {
+		if contains(t.hosts, shortName) || contains(t.hosts, fqdnName) {
 			continue
 		}
-		shortPort := fmt.Sprintf("%s:%d", short, cfg.AutoPort)
-		at.Targets = append(at.Targets, shortPort)
+		hostPort := fmt.Sprintf("%s:%d", fqdnName, cfg.AutoPort)
+		at.Targets = append(at.Targets, hostPort)
 	}
 	return at
 }
