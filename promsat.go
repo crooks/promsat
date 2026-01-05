@@ -171,8 +171,8 @@ func (t *existingTargets) compareToSat() *autoTarget {
 		if contains(t.hosts, shortName) || contains(t.hosts, fqdnName) {
 			continue
 		}
-		shortPort := fmt.Sprintf("%s:%d", shortName, cfg.AutoPort)
-		at.Targets = append(at.Targets, shortPort)
+		hostPort := fmt.Sprintf("%s:%d", fqdnName, cfg.AutoPort)
+		at.Targets = append(at.Targets, hostPort)
 	}
 	return at
 }
